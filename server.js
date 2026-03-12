@@ -19,11 +19,18 @@ const BASE_URL = ENV === 'production'
   ? 'https://api.mvola.mg'
   : 'https://devapi.mvola.mg';
 
+const TOKEN_URL = ENV === 'production'
+  ? 'https://api.mvola.mg/token'
+  : 'https://devapi.mvola.mg/token';
+
 // ── 1. Get OAuth Token ──
 async function getToken() {
   const credentials = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
-  const res = await axios.post(
-    `${BASE_URL}/token`,
+  console.log('Getting token from:', TOKEN_URL);
+  console.log('ENV:', ENV);
+  try {
+    const res = await axios.post(
+    TOKEN_URL,
     'grant_type=client_credentials&scope=EXT_INT_MVOLA_SCOPE',
     {
       headers: {
@@ -33,7 +40,13 @@ async function getToken() {
       }
     }
   );
+  console.log('Token obtained successfully');
   return res.data.access_token;
+  } catch(tokenErr) {
+    console.error('Token error status:', tokenErr.response?.status);
+    console.error('Token error data:', JSON.stringify(tokenErr.response?.data));
+    throw new Error(tokenErr.response?.data?.error_description || tokenErr.response?.data?.error || 'Token error: ' + tokenErr.message);
+  }
 }
 
 // ── 2. Initiate Payment ──
