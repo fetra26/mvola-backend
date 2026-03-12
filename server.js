@@ -59,23 +59,29 @@ app.post('/api/mvola/pay', async (req, res) => {
     const correlationId  = 'PCM-' + Date.now();
     const transactionRef = 'TX' + Date.now();
 
+    const requestDate = new Date().toISOString().replace('Z', '+03:00');
+
     const body = {
       amount: String(amount),
       currency: 'Ar',
       descriptionText: description || `Frais inscription ${COMPANY_NAME}`,
       requestingOrganisationTransactionReference: transactionRef,
-      requestDate: new Date().toISOString(),
+      requestDate: requestDate,
       debitParty: [{ key: 'msisdn', value: payerMsisdn }],
       creditParty: [{ key: 'msisdn', value: merchantMsisdn }],
       metadata: [
         { key: 'partnerName', value: COMPANY_NAME },
-        { key: 'fc', value: 'USD' },
-        { key: 'amountFc', value: '1' }
+        { key: 'fc', value: 'Ar' },
+        { key: 'amountFc', value: String(amount) }
       ]
     };
 
+    console.log('MVola request body:', JSON.stringify(body, null, 2));
+    console.log('Merchant MSISDN:', merchantMsisdn);
+    console.log('Payer MSISDN:', payerMsisdn);
+
     const response = await axios.post(
-      `${BASE_URL}/mvola/mm/transactions/type/merchantpay/1.0.0`,
+      `${BASE_URL}/mvola/mm/transactions/type/merchantpay/1.0.0/`,
       body,
       {
         headers: {
@@ -83,10 +89,10 @@ app.post('/api/mvola/pay', async (req, res) => {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
           'X-CorrelationID': correlationId,
-          'UserLanguage': 'fr',
+          'UserLanguage': 'MG',
           'UserAccountIdentifier': `msisdn;${merchantMsisdn}`,
           'partnerName': COMPANY_NAME,
-          'X-Callback-URL': req.body.callbackUrl || '',
+          'X-Callback-URL': '',
           'originalTransactionReference': transactionRef,
           'accessToken': token
         }
@@ -102,10 +108,14 @@ app.post('/api/mvola/pay', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('MVola error:', err.response?.data || err.message);
+    const errData = err.response?.data;
+    const errMsg = errData?.message || errData?.error || errData?.errorDescription || JSON.stringify(errData) || err.message;
+    console.error('MVola error status:', err.response?.status);
+    console.error('MVola error data:', JSON.stringify(errData, null, 2));
     return res.status(500).json({
       success: false,
-      error: err.response?.data?.message || err.response?.data?.error || err.message
+      error: errMsg,
+      details: errData
     });
   }
 });
