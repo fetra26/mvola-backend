@@ -59,7 +59,7 @@ app.post('/api/mvola/pay', async (req, res) => {
     const correlationId  = 'PCM-' + Date.now();
     const transactionRef = 'TX' + Date.now();
 
-    const requestDate = new Date().toISOString().replace('Z', '+03:00');
+    const requestDate = new Date().toISOString();
 
     const body = {
       amount: String(amount),
@@ -67,12 +67,13 @@ app.post('/api/mvola/pay', async (req, res) => {
       descriptionText: description || `Frais inscription ${COMPANY_NAME}`,
       requestingOrganisationTransactionReference: transactionRef,
       requestDate: requestDate,
+      originalTransactionReference: transactionRef,
       debitParty: [{ key: 'msisdn', value: payerMsisdn }],
       creditParty: [{ key: 'msisdn', value: merchantMsisdn }],
       metadata: [
         { key: 'partnerName', value: COMPANY_NAME },
-        { key: 'fc', value: 'Ar' },
-        { key: 'amountFc', value: String(amount) }
+        { key: 'fc', value: 'USD' },
+        { key: 'amountFc', value: '1' }
       ]
     };
 
@@ -86,15 +87,14 @@ app.post('/api/mvola/pay', async (req, res) => {
       {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Version': '1.0',
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
           'X-CorrelationID': correlationId,
           'UserLanguage': 'MG',
           'UserAccountIdentifier': `msisdn;${merchantMsisdn}`,
           'partnerName': COMPANY_NAME,
-          'X-Callback-URL': '',
-          'originalTransactionReference': transactionRef,
-          'accessToken': token
+          'X-Callback-URL': ''
         }
       }
     );
